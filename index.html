@@ -45,13 +45,14 @@
   .ex-info { flex: 1; min-width: 0; }
   .ex-name { font-size: 14px; font-weight: 500; color: var(--text); }
   .ex-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .ex-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+  .tag-rehab { background: #E1F5EE; color: #0F6E56; }
   .ex-arrow { font-size: 11px; color: var(--text3); }
   .weight-panel { padding: 0 14px 12px 46px; }
   .weight-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
   .set-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
   .set-label { font-size: 12px; color: var(--text2); min-width: 36px; }
   .set-input { width: 62px; padding: 5px 8px; border-radius: 6px; border: 0.5px solid var(--border2); font-size: 13px; background: var(--bg); color: var(--text); text-align: center; outline: none; }
-  .set-input:focus { border-color: var(--active-color, #888); }
   .set-unit { font-size: 11px; color: var(--text3); min-width: 20px; }
   .set-x { font-size: 12px; color: var(--text3); }
   .prev-info { font-size: 11px; color: var(--text3); margin-left: 4px; white-space: nowrap; }
@@ -111,7 +112,7 @@ const PLAN = {
       { name: "Face Pulls (rear delt/rhomboids)", sets: 3, reps: "15", rest: "45s" },
       { name: "Incline Dumbbell Press (chest)", sets: 3, reps: "10–12", rest: "60s" },
       { name: "Tricep Pushdown (cable)", sets: 3, reps: "12–15", rest: "45s" },
-      { name: "Bicep Curl superset w/ Hammer Curl", sets: 3, reps: "10+10", rest: "45s" },
+      { name: "Preacher Curl", sets: 3, reps: "10–12", rest: "45s" },
     ]
   },
   Wednesday: {
@@ -129,6 +130,9 @@ const PLAN = {
       { name: "Cable Crunch / Weighted Crunch", sets: 3, reps: "40s on / 20s off", rest: null },
       { name: "Plank w/ Shoulder Taps", sets: 3, reps: "40s on / 20s off", rest: null },
       { name: "Russian Twists (weighted)", sets: 3, reps: "40s on / 20s off", rest: null },
+      { name: "Band External Rotation (elbow at side)", sets: 3, reps: "15 each side", rest: null, rehab: true },
+      { name: "Wall Slides", sets: 2, reps: "10", rest: null, rehab: true },
+      { name: "Prone Y/T/W Raises (bodyweight)", sets: 2, reps: "10 each", rest: null, rehab: true },
     ]
   },
   Thursday: {
@@ -152,9 +156,9 @@ const PLAN = {
       { name: "Barbell Bench Press", sets: 4, reps: "6–8", rest: "90s" },
       { name: "Incline Dumbbell Press", sets: 3, reps: "10–12", rest: "60s" },
       { name: "Cable Fly / Pec Deck", sets: 3, reps: "12–15", rest: "45s" },
-      { name: "Overhead Press (barbell or dumbbell)", sets: 3, reps: "8–10", rest: "75s" },
-      { name: "Lateral Raise (slow & controlled)", sets: 3, reps: "12–15", rest: "45s" },
-      { name: "Tricep Overhead Extension (dumbbell)", sets: 3, reps: "12–15", rest: "45s" },
+      { name: "Landmine Press", sets: 3, reps: "8–10", rest: "75s" },
+      { name: "Cable External Rotation (rotator cuff)", sets: 3, reps: "15", rest: "45s", rehab: true },
+      { name: "Tricep Pushdown (cable)", sets: 3, reps: "12–15", rest: "45s" },
       { name: "Lat Pulldown or Assisted Pull-Up", sets: 3, reps: "10–12", rest: "60s" },
       { name: "Doorway Chest Stretch", sets: null, reps: "90s", rest: null },
       { name: "Cross-body Shoulder Stretch", sets: null, reps: "60s each", rest: null },
@@ -165,7 +169,7 @@ const PLAN = {
 };
 
 const DAYS = Object.keys(PLAN);
-const SK = "wt-v3";
+const SK = "wt-v4";
 let state = { activeDay: "Monday", checked: {}, weights: {}, reps: {}, dates: {}, unit: "lbs" };
 let history = [];
 
@@ -235,10 +239,8 @@ function setReps(day, idx, si, val) {
 }
 
 function updateMeta(day, idx) {
-  const k = `${day}-${idx}`;
-  const ex = PLAN[day].exercises[idx];
   const meta = document.getElementById(`meta-${day}-${idx}`);
-  if (meta) meta.innerHTML = buildMeta(ex, k, day);
+  if (meta) meta.innerHTML = buildMeta(PLAN[day].exercises[idx], `${day}-${idx}`, day);
 }
 
 function buildMeta(ex, k, day) {
@@ -292,10 +294,10 @@ function openHistory() {
       const rData = (h.reps && h.reps[k]) || {};
       const filled = Object.entries(wData).filter(([, v]) => v !== "");
       if (filled.length === 0) return;
-      html += `<div class="hist-ex"><div class="hist-ex-name">${ex.name}</div><div class="hist-sets">`;
+      html += `<div class="hist-ex"><div class="hist-ex-name">${ex.name}${ex.rehab ? ' <span style="font-size:10px;background:#E1F5EE;color:#0F6E56;padding:2px 6px;border-radius:4px">rehab</span>' : ""}</div><div class="hist-sets">`;
       filled.forEach(([si, w]) => {
-        const r = rData[si] ? `× ${rData[si]} reps` : "";
-        html += `<div class="hist-set-row">Set ${parseInt(si)+1}: ${w} ${state.unit} ${r}</div>`;
+        const r = rData[si] ? ` × ${rData[si]} reps` : "";
+        html += `<div class="hist-set-row">Set ${parseInt(si)+1}: ${w} ${state.unit}${r}</div>`;
       });
       html += `</div></div>`;
     });
@@ -343,6 +345,7 @@ function renderDay() {
     const prevR = prev ? ((prev.reps && prev.reps[k]) || {}) : {};
     const panelId = `panel-${day}-${i}`;
     const cbClass = `checkbox${checked ? " checked" : ""}`;
+    const rehabBadge = ex.rehab ? `<span style="font-size:10px;background:#E1F5EE;color:#0F6E56;padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:middle">rehab</span>` : "";
 
     let setRows = "";
     if (hasWeight) {
@@ -374,7 +377,7 @@ function renderDay() {
           <svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4.5L4 7.5L10 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
         <div class="ex-info">
-          <div class="ex-name" style="${checked ? `text-decoration:line-through;color:${c}` : ""}">${ex.name}</div>
+          <div class="ex-name" style="${checked ? `text-decoration:line-through;color:${c}` : ""}">${ex.name}${rehabBadge}</div>
           <div class="ex-meta" id="meta-${day}-${i}">${buildMeta(ex, k, day)}</div>
         </div>
         ${hasWeight ? `<span class="ex-arrow" id="arr-${panelId}">▼</span>` : ""}
