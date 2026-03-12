@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Workout">
+<title>Workout Tracker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f5f5f3; --bg3: #efefec;
+    --text: #1a1a18; --text2: #6b6b65; --text3: #9a9a94;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.2);
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1c1c1a; --bg2: #252523; --bg3: #2e2e2b; --text: #f0f0ec; --text2: #a0a09a; --text3: #6a6a64; --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.18); }
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); max-width: 540px; margin: 0 auto; padding: 16px 16px 40px; font-size: 15px; }
+  h1 { font-size: 18px; font-weight: 500; }
+  .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .top-right { display: flex; gap: 8px; align-items: center; }
+  .unit-btn, .hist-btn { font-size: 12px; padding: 4px 12px; border-radius: 20px; border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); cursor: pointer; font-weight: 500; }
+  .day-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .day-tab { padding: 6px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font-weight: 400; }
+  .day-tab.active { color: #fff; border-color: transparent; }
+  .header-card { border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .header-card .day-name { font-size: 15px; font-weight: 500; }
+  .header-card .day-label { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .header-card .pct { font-size: 22px; font-weight: 500; }
+  .header-card .count { font-size: 12px; color: var(--text2); }
+  .progress-bar { height: 4px; border-radius: 4px; background: var(--border); margin-bottom: 16px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+  .info-bar { font-size: 12px; color: var(--text2); padding: 8px 12px; border: 0.5px solid var(--border); border-radius: 8px; margin-bottom: 12px; }
+  .info-bar strong { color: var(--text); }
+  .date-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .date-row label { font-size: 12px; color: var(--text2); white-space: nowrap; }
+  .date-row input[type=date] { font-size: 13px; padding: 5px 10px; border-radius: 8px; border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); flex: 1; }
+  .ex-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .ex-card { border-radius: 10px; border: 0.5px solid var(--border); background: var(--bg); overflow: hidden; }
+  .ex-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; }
+  .checkbox { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border2); background: transparent; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .checkbox svg { display: none; }
+  .checkbox.checked svg { display: block; }
+  .ex-info { flex: 1; min-width: 0; }
+  .ex-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .ex-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .ex-arrow { font-size: 11px; color: var(--text3); }
+  .weight-panel { padding: 0 14px 12px 46px; }
+  .weight-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+  .set-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .set-label { font-size: 12px; color: var(--text2); min-width: 40px; }
+  .set-input { width: 72px; padding: 5px 8px; border-radius: 6px; border: 0.5px solid var(--border2); font-size: 13px; background: var(--bg); color: var(--text); text-align: center; outline: none; }
+  .set-unit { font-size: 12px; color: var(--text2); }
+  .prev-weight { font-size: 11px; color: var(--text3); min-width: 60px; }
+  .bottom-row { display: flex; gap: 8px; margin-top: 4px; }
+  .reset-btn { font-size: 13px; padding: 7px 16px; border-radius: 8px; cursor: pointer; border: 0.5px solid var(--border2); background: var(--bg); color: var(--text2); }
+
+  /* History modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
+  .modal { background: var(--bg); border-radius: 16px 16px 0 0; width: 100%; max-width: 540px; max-height: 80vh; overflow-y: auto; padding: 20px 16px 40px; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .modal-title { font-size: 16px; font-weight: 500; }
+  .modal-close { font-size: 13px; padding: 4px 12px; border-radius: 20px; border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); cursor: pointer; }
+  .hist-session { margin-bottom: 20px; }
+  .hist-session-title { font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 0.5px solid var(--border); }
+  .hist-ex { font-size: 13px; margin-bottom: 6px; }
+  .hist-ex-name { font-weight: 500; margin-bottom: 2px; }
+  .hist-sets { font-size: 12px; color: var(--text2); }
+  .no-hist { font-size: 13px; color: var(--text3); text-align: center; padding: 24px 0; }
+</style>
+</head>
+<body>
+
+<div class="top-row">
+  <h1>Workout Tracker</h1>
+  <div class="top-right">
+    <button class="hist-btn" onclick="openHistory()">History</button>
+    <button class="unit-btn" id="unitBtn" onclick="toggleUnit()">lbs</button>
+  </div>
+</div>
+
+<div class="day-tabs" id="dayTabs"></div>
+<div id="dayView"></div>
+<div id="histModal"></div>
+
+<script>
+const PLAN = {
+  Monday: {
+    label: "Legs — Isolation & Targeted", color: "#1D9E75", bg: "#E1F5EE",
+    warmup: "5 min light cardio + leg swings", cooldown: "5 min quad/hamstring stretches",
+    exercises: [
+      { name: "Leg Press (quad focus)", sets: 3, reps: "10–12", rest: "60s" },
+      { name: "Romanian Deadlift (hamstring focus)", sets: 3, reps: "10–12", rest: "60s" },
+      { name: "Leg Extension (quad isolation)", sets: 3, reps: "12–15", rest: "45s" },
+      { name: "Lying Leg Curl (hamstring isolation)", sets: 3, reps: "12–15", rest: "45s" },
+      { name: "Dumbbell Reverse Lunges", sets: 3, reps: "10–12 each", rest: "60s" },
+      { name: "Seated Calf Raise", sets: 3, reps: "15–20", rest: "45s" },
+      { name: "Hip Abductor Machine", sets: 3, reps: "15", rest: "45s" },
+      { name: "Hip Adductor Machine", sets: 3, reps: "15", rest: "45s" },
+    ]
+  },
+  Tuesday: {
+    label: "Full Upper Body — Back Focus", color: "#185FA5", bg: "#E6F1FB",
+    warmup: "5 min band pull-aparts + arm circles", cooldown: "5 min chest opener + thoracic rotation",
+    exercises: [
+      { name: "Pull-Ups or Lat Pulldown", sets: 4, reps: "8–10", rest: "75s" },
+      { name: "Barbell or Dumbbell Row", sets: 3, reps: "8–10", rest: "75s" },
+      { name: "Seated Cable Row (close grip)", sets: 3, reps: "10–12", rest: "60s" },
+      { name: "Face Pulls (rear delt/rhomboids)", sets: 3, reps: "15", rest: "45s" },
+      { name: "Incline Dumbbell Press (chest)", sets: 3, reps: "10–12", rest: "60s" },
+      { name: "Tricep Pushdown (cable)", sets: 3, reps: "12–15", rest: "45s" },
+      { name: "Bicep Curl superset w/ Hammer Curl", sets: 3, reps: "10+10", rest: "45s" },
+    ]
+  },
+  Wednesday: {
+    label: "Abs & Mobility", color: "#BA7517", bg: "#FAEEDA",
+    warmup: null, cooldown: null,
+    exercises: [
+      { name: "World's Greatest Stretch", sets: null, reps: "5 each side", rest: null },
+      { name: "Hip 90/90 Stretch", sets: null, reps: "90s each side", rest: null },
+      { name: "Thoracic Spine Rotation (foam roller)", sets: null, reps: "2 min", rest: null },
+      { name: "Couch Stretch (hip flexor)", sets: null, reps: "90s each side", rest: null },
+      { name: "Pigeon Pose", sets: null, reps: "90s each side", rest: null },
+      { name: "Cat-Cow + Thread the Needle", sets: null, reps: "2 min", rest: null },
+      { name: "Dead Bug", sets: 3, reps: "40s on / 20s off", rest: null },
+      { name: "Hanging / Lying Leg Raise", sets: 3, reps: "40s on / 20s off", rest: null },
+      { name: "Cable Crunch / Weighted Crunch", sets: 3, reps: "40s on / 20s off", rest: null },
+      { name: "Plank w/ Shoulder Taps", sets: 3, reps: "40s on / 20s off", rest: null },
+      { name: "Russian Twists (weighted)", sets: 3, reps: "40s on / 20s off", rest: null },
+    ]
+  },
+  Thursday: {
+    label: "Legs — Compound + Mobility", color: "#993556", bg: "#FBEAF0",
+    warmup: "5 min walk/cycle + hip circles", cooldown: null,
+    exercises: [
+      { name: "Barbell Back Squat", sets: 4, reps: "5–6", rest: "90s" },
+      { name: "Romanian Deadlift", sets: 3, reps: "6–8", rest: "90s" },
+      { name: "Walking Lunges (weighted)", sets: 3, reps: "10 each leg", rest: "60s" },
+      { name: "Glute Bridge / Hip Thrust (barbell)", sets: 3, reps: "10–12", rest: "60s" },
+      { name: "Standing Quad Stretch", sets: null, reps: "60s each", rest: null },
+      { name: "Seated Hamstring Stretch", sets: null, reps: "60s each", rest: null },
+      { name: "Lizard Lunge Hip Flexor Stretch", sets: null, reps: "90s each", rest: null },
+      { name: "Ankle Circles", sets: null, reps: "1 min each", rest: null },
+    ]
+  },
+  Friday: {
+    label: "Full Upper Body — Chest & Shoulder Focus", color: "#534AB7", bg: "#EEEDFE",
+    warmup: "5 min band work + shoulder circles", cooldown: null,
+    exercises: [
+      { name: "Barbell Bench Press", sets: 4, reps: "6–8", rest: "90s" },
+      { name: "Incline Dumbbell Press", sets: 3, reps: "10–12", rest: "60s" },
+      { name: "Cable Fly / Pec Deck", sets: 3, reps: "12–15", rest: "45s" },
+      { name: "Overhead Press (barbell or dumbbell)", sets: 3, reps: "8–10", rest: "75s" },
+      { name: "Lateral Raise (slow & controlled)", sets: 3, reps: "12–15", rest: "45s" },
+      { name: "Tricep Overhead Extension (dumbbell)", sets: 3, reps: "12–15", rest: "45s" },
+      { name: "Lat Pulldown or Assisted Pull-Up", sets: 3, reps: "10–12", rest: "60s" },
+      { name: "Doorway Chest Stretch", sets: null, reps: "90s", rest: null },
+      { name: "Cross-body Shoulder Stretch", sets: null, reps: "60s each", rest: null },
+      { name: "Overhead Tricep Stretch", sets: null, reps: "60s each", rest: null },
+      { name: "Child's Pose", sets: null, reps: "2 min", rest: null },
+    ]
+  }
+};
+
+const DAYS = Object.keys(PLAN);
+const SK = "wt-v2";
+
+// state: current week's ticks, current weights, dates, unit
+// history: array of saved sessions { day, date, weights, savedAt }
+let state = { activeDay: "Monday", checked: {}, weights: {}, dates: {}, unit: "lbs" };
+let history = [];
+
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SK));
+    if (s) { state = { ...state, ...s.state }; history = s.history || []; }
+  } catch {}
+}
+function persist() {
+  try { localStorage.setItem(SK, JSON.stringify({ state, history })); } catch {}
+}
+
+function todayStr() {
+  const d = new Date();
+  return d.toISOString().split("T")[0];
+}
+
+function fmtDate(str) {
+  if (!str) return "";
+  const d = new Date(str + "T00:00:00");
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function toggleUnit() {
+  state.unit = state.unit === "lbs" ? "kg" : "lbs";
+  document.getElementById("unitBtn").textContent = state.unit;
+  persist(); renderDay();
+}
+
+function isDayComplete(day) {
+  return PLAN[day].exercises.every((_, i) => state.checked[`${day}-${i}`]);
+}
+
+function getPrevWeights(day) {
+  // find most recent history entry for this day
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].day === day) return history[i].weights;
+  }
+  return {};
+}
+
+function renderTabs() {
+  const el = document.getElementById("dayTabs");
+  el.innerHTML = DAYS.map(d => {
+    const done = isDayComplete(d), active = d === state.activeDay;
+    const c = PLAN[d].color, bg = PLAN[d].bg;
+    let style = `border-color:${active ? c : "var(--border)"};`;
+    style += active ? `background:${c};color:#fff;` : done ? `background:${bg};color:${c};` : "";
+    return `<button class="day-tab${active ? " active" : ""}" style="${style}" onclick="switchDay('${d}')">${done && !active ? "✓ " : ""}${d}</button>`;
+  }).join("");
+}
+
+function switchDay(d) { state.activeDay = d; persist(); renderTabs(); renderDay(); }
+
+function toggleCheck(day, idx) {
+  const k = `${day}-${idx}`;
+  state.checked[k] = !state.checked[k];
+  persist(); renderTabs(); renderDay();
+}
+
+function setWeight(day, idx, si, val) {
+  const k = `${day}-${idx}`;
+  if (!state.weights[k]) state.weights[k] = {};
+  state.weights[k][si] = val;
+  persist();
+  const inp = document.getElementById(`w-${day}-${idx}-${si}`);
+  if (inp) inp.style.borderColor = val ? PLAN[day].color : "var(--border2)";
+  const meta = document.getElementById(`meta-${day}-${idx}`);
+  if (meta) meta.innerHTML = buildMeta(PLAN[day].exercises[idx], k, day);
+}
+
+function setDate(day, val) {
+  state.dates[day] = val;
+  persist();
+}
+
+function buildMeta(ex, k, day) {
+  const parts = [ex.sets && `${ex.sets} sets`, ex.reps && `${ex.reps} reps`, ex.rest && `${ex.rest} rest`].filter(Boolean).join(" · ");
+  const wData = state.weights[k] || {};
+  const filled = Object.values(wData).filter(v => v !== "").length;
+  const logged = ex.sets && filled > 0 ? `<span style="color:${PLAN[day].color};margin-left:6px">· ${filled}/${ex.sets} logged</span>` : "";
+  return parts + logged;
+}
+
+function togglePanel(id) {
+  const p = document.getElementById(id), a = document.getElementById("arr-" + id);
+  if (!p) return;
+  const open = p.style.display !== "none";
+  p.style.display = open ? "none" : "block";
+  if (a) a.textContent = open ? "▼" : "▲";
+}
+
+function resetDay() {
+  const day = state.activeDay;
+  const date = state.dates[day] || todayStr();
+
+  // save to history before clearing ticks (weights preserved in history, current weights stay)
+  const snapshot = {
+    day, date,
+    weights: JSON.parse(JSON.stringify(state.weights)),
+    savedAt: new Date().toISOString()
+  };
+  history.push(snapshot);
+
+  // clear only ticks and date, keep weights for reference
+  DAYS.forEach(d => {
+    if (d === day) {
+      PLAN[d].exercises.forEach((_, i) => { delete state.checked[`${d}-${i}`]; });
+      delete state.dates[d];
+    }
+  });
+
+  persist(); renderTabs(); renderDay();
+}
+
+function openHistory() {
+  const days = [...new Set(history.map(h => h.day))];
+  if (history.length === 0) {
+    document.getElementById("histModal").innerHTML = `
+      <div class="modal-overlay" onclick="closeHistory(event)">
+        <div class="modal">
+          <div class="modal-header"><span class="modal-title">History</span><button class="modal-close" onclick="closeHistory()">Close</button></div>
+          <div class="no-hist">No sessions saved yet. Complete a day and reset to save.</div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // group by day then by date
+  let html = `<div class="modal-overlay" onclick="closeHistory(event)"><div class="modal">
+    <div class="modal-header"><span class="modal-title">Session History</span><button class="modal-close" onclick="closeHistory()">Close</button></div>`;
+
+  // show most recent first
+  const sorted = [...history].reverse();
+  sorted.forEach(h => {
+    const d = PLAN[h.day];
+    html += `<div class="hist-session">
+      <div class="hist-session-title" style="color:${d.color}">${h.day} — ${fmtDate(h.date)}</div>`;
+    PLAN[h.day].exercises.forEach((ex, i) => {
+      if (!ex.sets) return;
+      const k = `${h.day}-${i}`;
+      const wData = (h.weights[k]) || {};
+      const filled = Object.entries(wData).filter(([,v]) => v !== "");
+      if (filled.length === 0) return;
+      const setStr = filled.map(([si, v]) => `Set ${parseInt(si)+1}: ${v} ${state.unit}`).join(" · ");
+      html += `<div class="hist-ex"><div class="hist-ex-name">${ex.name}</div><div class="hist-sets">${setStr}</div></div>`;
+    });
+    html += `</div>`;
+  });
+
+  html += `</div></div>`;
+  document.getElementById("histModal").innerHTML = html;
+}
+
+function closeHistory(e) {
+  if (!e || e.target.classList.contains("modal-overlay")) {
+    document.getElementById("histModal").innerHTML = "";
+  }
+}
+
+function renderDay() {
+  const day = state.activeDay;
+  const d = PLAN[day];
+  const total = d.exercises.length;
+  const done = d.exercises.filter((_, i) => state.checked[`${day}-${i}`]).length;
+  const pct = Math.round((done / total) * 100);
+  const c = d.color, bg = d.bg;
+  const prevW = getPrevWeights(day);
+  const dateVal = state.dates[day] || "";
+
+  let html = `
+    <div class="header-card" style="background:${bg}">
+      <div><div class="day-name" style="color:${c}">${day}</div><div class="day-label">${d.label}</div></div>
+      <div style="text-align:right"><div class="pct" style="color:${c}">${pct}%</div><div class="count">${done}/${total} done</div></div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${c}"></div></div>
+    <div class="date-row">
+      <label for="dateInput">Session date</label>
+      <input type="date" id="dateInput" value="${dateVal}" onchange="setDate('${day}', this.value)">
+    </div>
+  `;
+
+  if (d.warmup) html += `<div class="info-bar">🔥 <strong>Warm-up:</strong> ${d.warmup}</div>`;
+
+  html += `<div class="ex-list">`;
+  d.exercises.forEach((ex, i) => {
+    const k = `${day}-${i}`;
+    const checked = !!state.checked[k];
+    const hasWeight = ex.sets && ex.sets > 0;
+    const wData = state.weights[k] || {};
+    const panelId = `panel-${day}-${i}`;
+    const borderColor = checked ? c : "var(--border)";
+    const cardBg = checked ? bg : "var(--bg)";
+    const cbClass = `checkbox${checked ? " checked" : ""}`;
+    const cbBorder = checked ? c : "var(--border2)";
+    const cbBg = checked ? c : "transparent";
+
+    let setRows = "";
+    if (hasWeight) {
+      const prevK = prevW[k] || {};
+      for (let si = 0; si < ex.sets; si++) {
+        const v = wData[si] !== undefined ? wData[si] : "";
+        const prev = prevK[si] || "";
+        const bColor = v ? c : "var(--border2)";
+        const prevLabel = prev ? `<span class="prev-weight">prev: ${prev}</span>` : `<span class="prev-weight"></span>`;
+        setRows += `<div class="set-row">
+          <span class="set-label">Set ${si+1}</span>
+          <input id="w-${day}-${i}-${si}" class="set-input" type="number" placeholder="0" value="${v}" style="border-color:${bColor}" oninput="setWeight('${day}',${i},${si},this.value)">
+          <span class="set-unit">${state.unit}</span>
+          ${prevLabel}
+        </div>`;
+      }
+    }
+
+    html += `<div style="border-radius:10px;border:0.5px solid ${borderColor};background:${cardBg};overflow:hidden">
+      <div class="ex-row" onclick="${hasWeight ? `togglePanel('${panelId}')` : `toggleCheck('${day}',${i})`}">
+        <div class="${cbClass}" style="border-color:${cbBorder};background:${cbBg}" onclick="event.stopPropagation();toggleCheck('${day}',${i})">
+          <svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4.5L4 7.5L10 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="ex-info">
+          <div class="ex-name" style="${checked ? `text-decoration:line-through;color:${c}` : ""}">${ex.name}</div>
+          <div class="ex-meta" id="meta-${day}-${i}">${buildMeta(ex, k, day)}</div>
+        </div>
+        ${hasWeight ? `<span class="ex-arrow" id="arr-${panelId}">▼</span>` : ""}
+      </div>
+      ${hasWeight ? `<div class="weight-panel" id="${panelId}" style="display:none"><div class="weight-label">Log weight · <span style="color:var(--text3)">prev = last session</span></div>${setRows}</div>` : ""}
+    </div>`;
+  });
+
+  html += `</div>`;
+  if (d.cooldown) html += `<div class="info-bar" style="margin-top:4px">🧊 <strong>Cool-down:</strong> ${d.cooldown}</div>`;
+  html += `<div class="bottom-row"><button class="reset-btn" onclick="resetDay()">Save & reset ${day}</button></div>`;
+
+  document.getElementById("dayView").innerHTML = html;
+  document.getElementById("unitBtn").textContent = state.unit;
+}
+
+load();
+renderTabs();
+renderDay();
+</script>
+</body>
+</html>
