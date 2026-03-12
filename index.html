@@ -13,7 +13,6 @@
     --bg: #ffffff; --bg2: #f5f5f3; --bg3: #efefec;
     --text: #1a1a18; --text2: #6b6b65; --text3: #9a9a94;
     --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.2);
-    --radius: 10px;
   }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #1c1c1a; --bg2: #252523; --bg3: #2e2e2b; --text: #f0f0ec; --text2: #a0a09a; --text3: #6a6a64; --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.18); }
@@ -39,7 +38,6 @@
   .date-row label { font-size: 12px; color: var(--text2); white-space: nowrap; }
   .date-row input[type=date] { font-size: 13px; padding: 5px 10px; border-radius: 8px; border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); flex: 1; }
   .ex-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-  .ex-card { border-radius: 10px; border: 0.5px solid var(--border); background: var(--bg); overflow: hidden; }
   .ex-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; }
   .checkbox { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border2); background: transparent; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .checkbox svg { display: none; }
@@ -50,25 +48,26 @@
   .ex-arrow { font-size: 11px; color: var(--text3); }
   .weight-panel { padding: 0 14px 12px 46px; }
   .weight-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
-  .set-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .set-label { font-size: 12px; color: var(--text2); min-width: 40px; }
-  .set-input { width: 72px; padding: 5px 8px; border-radius: 6px; border: 0.5px solid var(--border2); font-size: 13px; background: var(--bg); color: var(--text); text-align: center; outline: none; }
-  .set-unit { font-size: 12px; color: var(--text2); }
-  .prev-weight { font-size: 11px; color: var(--text3); min-width: 60px; }
+  .set-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .set-label { font-size: 12px; color: var(--text2); min-width: 36px; }
+  .set-input { width: 62px; padding: 5px 8px; border-radius: 6px; border: 0.5px solid var(--border2); font-size: 13px; background: var(--bg); color: var(--text); text-align: center; outline: none; }
+  .set-input:focus { border-color: var(--active-color, #888); }
+  .set-unit { font-size: 11px; color: var(--text3); min-width: 20px; }
+  .set-x { font-size: 12px; color: var(--text3); }
+  .prev-info { font-size: 11px; color: var(--text3); margin-left: 4px; white-space: nowrap; }
   .bottom-row { display: flex; gap: 8px; margin-top: 4px; }
   .reset-btn { font-size: 13px; padding: 7px 16px; border-radius: 8px; cursor: pointer; border: 0.5px solid var(--border2); background: var(--bg); color: var(--text2); }
-
-  /* History modal */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
   .modal { background: var(--bg); border-radius: 16px 16px 0 0; width: 100%; max-width: 540px; max-height: 80vh; overflow-y: auto; padding: 20px 16px 40px; }
   .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
   .modal-title { font-size: 16px; font-weight: 500; }
   .modal-close { font-size: 13px; padding: 4px 12px; border-radius: 20px; border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); cursor: pointer; }
   .hist-session { margin-bottom: 20px; }
-  .hist-session-title { font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 0.5px solid var(--border); }
-  .hist-ex { font-size: 13px; margin-bottom: 6px; }
-  .hist-ex-name { font-weight: 500; margin-bottom: 2px; }
-  .hist-sets { font-size: 12px; color: var(--text2); }
+  .hist-session-title { font-size: 13px; font-weight: 500; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 0.5px solid var(--border); }
+  .hist-ex { font-size: 13px; margin-bottom: 8px; }
+  .hist-ex-name { font-weight: 500; margin-bottom: 4px; }
+  .hist-sets { display: flex; flex-direction: column; gap: 2px; }
+  .hist-set-row { font-size: 12px; color: var(--text2); }
   .no-hist { font-size: 13px; color: var(--text3); text-align: center; padding: 24px 0; }
 </style>
 </head>
@@ -166,11 +165,8 @@ const PLAN = {
 };
 
 const DAYS = Object.keys(PLAN);
-const SK = "wt-v2";
-
-// state: current week's ticks, current weights, dates, unit
-// history: array of saved sessions { day, date, weights, savedAt }
-let state = { activeDay: "Monday", checked: {}, weights: {}, dates: {}, unit: "lbs" };
+const SK = "wt-v3";
+let state = { activeDay: "Monday", checked: {}, weights: {}, reps: {}, dates: {}, unit: "lbs" };
 let history = [];
 
 function load() {
@@ -182,39 +178,26 @@ function load() {
 function persist() {
   try { localStorage.setItem(SK, JSON.stringify({ state, history })); } catch {}
 }
-
-function todayStr() {
-  const d = new Date();
-  return d.toISOString().split("T")[0];
-}
-
+function todayStr() { return new Date().toISOString().split("T")[0]; }
 function fmtDate(str) {
   if (!str) return "";
-  const d = new Date(str + "T00:00:00");
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(str + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
-
 function toggleUnit() {
   state.unit = state.unit === "lbs" ? "kg" : "lbs";
   document.getElementById("unitBtn").textContent = state.unit;
   persist(); renderDay();
 }
-
-function isDayComplete(day) {
-  return PLAN[day].exercises.every((_, i) => state.checked[`${day}-${i}`]);
-}
-
-function getPrevWeights(day) {
-  // find most recent history entry for this day
+function isDayComplete(d) { return PLAN[d].exercises.every((_, i) => state.checked[`${d}-${i}`]); }
+function getPrevSession(day) {
   for (let i = history.length - 1; i >= 0; i--) {
-    if (history[i].day === day) return history[i].weights;
+    if (history[i].day === day) return history[i];
   }
-  return {};
+  return null;
 }
 
 function renderTabs() {
-  const el = document.getElementById("dayTabs");
-  el.innerHTML = DAYS.map(d => {
+  document.getElementById("dayTabs").innerHTML = DAYS.map(d => {
     const done = isDayComplete(d), active = d === state.activeDay;
     const c = PLAN[d].color, bg = PLAN[d].bg;
     let style = `border-color:${active ? c : "var(--border)"};`;
@@ -238,22 +221,34 @@ function setWeight(day, idx, si, val) {
   persist();
   const inp = document.getElementById(`w-${day}-${idx}-${si}`);
   if (inp) inp.style.borderColor = val ? PLAN[day].color : "var(--border2)";
-  const meta = document.getElementById(`meta-${day}-${idx}`);
-  if (meta) meta.innerHTML = buildMeta(PLAN[day].exercises[idx], k, day);
+  updateMeta(day, idx);
 }
 
-function setDate(day, val) {
-  state.dates[day] = val;
+function setReps(day, idx, si, val) {
+  const k = `${day}-${idx}`;
+  if (!state.reps[k]) state.reps[k] = {};
+  state.reps[k][si] = val;
   persist();
+  const inp = document.getElementById(`r-${day}-${idx}-${si}`);
+  if (inp) inp.style.borderColor = val ? PLAN[day].color : "var(--border2)";
+  updateMeta(day, idx);
+}
+
+function updateMeta(day, idx) {
+  const k = `${day}-${idx}`;
+  const ex = PLAN[day].exercises[idx];
+  const meta = document.getElementById(`meta-${day}-${idx}`);
+  if (meta) meta.innerHTML = buildMeta(ex, k, day);
 }
 
 function buildMeta(ex, k, day) {
   const parts = [ex.sets && `${ex.sets} sets`, ex.reps && `${ex.reps} reps`, ex.rest && `${ex.rest} rest`].filter(Boolean).join(" · ");
-  const wData = state.weights[k] || {};
-  const filled = Object.values(wData).filter(v => v !== "").length;
-  const logged = ex.sets && filled > 0 ? `<span style="color:${PLAN[day].color};margin-left:6px">· ${filled}/${ex.sets} logged</span>` : "";
+  const wFilled = Object.values(state.weights[k] || {}).filter(v => v !== "").length;
+  const logged = ex.sets && wFilled > 0 ? `<span style="color:${PLAN[day].color};margin-left:6px">· ${wFilled}/${ex.sets} logged</span>` : "";
   return parts + logged;
 }
+
+function setDate(day, val) { state.dates[day] = val; persist(); }
 
 function togglePanel(id) {
   const p = document.getElementById(id), a = document.getElementById("arr-" + id);
@@ -265,70 +260,53 @@ function togglePanel(id) {
 
 function resetDay() {
   const day = state.activeDay;
-  const date = state.dates[day] || todayStr();
-
-  // save to history before clearing ticks (weights preserved in history, current weights stay)
-  const snapshot = {
-    day, date,
+  history.push({
+    day, date: state.dates[day] || todayStr(),
     weights: JSON.parse(JSON.stringify(state.weights)),
+    reps: JSON.parse(JSON.stringify(state.reps)),
     savedAt: new Date().toISOString()
-  };
-  history.push(snapshot);
-
-  // clear only ticks and date, keep weights for reference
-  DAYS.forEach(d => {
-    if (d === day) {
-      PLAN[d].exercises.forEach((_, i) => { delete state.checked[`${d}-${i}`]; });
-      delete state.dates[d];
-    }
   });
-
+  PLAN[day].exercises.forEach((_, i) => { delete state.checked[`${day}-${i}`]; });
+  delete state.dates[day];
   persist(); renderTabs(); renderDay();
 }
 
 function openHistory() {
-  const days = [...new Set(history.map(h => h.day))];
   if (history.length === 0) {
     document.getElementById("histModal").innerHTML = `
-      <div class="modal-overlay" onclick="closeHistory(event)">
-        <div class="modal">
-          <div class="modal-header"><span class="modal-title">History</span><button class="modal-close" onclick="closeHistory()">Close</button></div>
-          <div class="no-hist">No sessions saved yet. Complete a day and reset to save.</div>
-        </div>
-      </div>`;
+      <div class="modal-overlay" onclick="closeHistory(event)"><div class="modal">
+        <div class="modal-header"><span class="modal-title">History</span><button class="modal-close" onclick="closeHistory()">Close</button></div>
+        <div class="no-hist">No sessions saved yet.</div>
+      </div></div>`;
     return;
   }
-
-  // group by day then by date
   let html = `<div class="modal-overlay" onclick="closeHistory(event)"><div class="modal">
     <div class="modal-header"><span class="modal-title">Session History</span><button class="modal-close" onclick="closeHistory()">Close</button></div>`;
-
-  // show most recent first
-  const sorted = [...history].reverse();
-  sorted.forEach(h => {
+  [...history].reverse().forEach(h => {
     const d = PLAN[h.day];
-    html += `<div class="hist-session">
-      <div class="hist-session-title" style="color:${d.color}">${h.day} — ${fmtDate(h.date)}</div>`;
+    html += `<div class="hist-session"><div class="hist-session-title" style="color:${d.color}">${h.day} — ${fmtDate(h.date)}</div>`;
     PLAN[h.day].exercises.forEach((ex, i) => {
       if (!ex.sets) return;
       const k = `${h.day}-${i}`;
-      const wData = (h.weights[k]) || {};
-      const filled = Object.entries(wData).filter(([,v]) => v !== "");
+      const wData = h.weights[k] || {};
+      const rData = (h.reps && h.reps[k]) || {};
+      const filled = Object.entries(wData).filter(([, v]) => v !== "");
       if (filled.length === 0) return;
-      const setStr = filled.map(([si, v]) => `Set ${parseInt(si)+1}: ${v} ${state.unit}`).join(" · ");
-      html += `<div class="hist-ex"><div class="hist-ex-name">${ex.name}</div><div class="hist-sets">${setStr}</div></div>`;
+      html += `<div class="hist-ex"><div class="hist-ex-name">${ex.name}</div><div class="hist-sets">`;
+      filled.forEach(([si, w]) => {
+        const r = rData[si] ? `× ${rData[si]} reps` : "";
+        html += `<div class="hist-set-row">Set ${parseInt(si)+1}: ${w} ${state.unit} ${r}</div>`;
+      });
+      html += `</div></div>`;
     });
     html += `</div>`;
   });
-
   html += `</div></div>`;
   document.getElementById("histModal").innerHTML = html;
 }
 
 function closeHistory(e) {
-  if (!e || e.target.classList.contains("modal-overlay")) {
-    document.getElementById("histModal").innerHTML = "";
-  }
+  if (!e || e.target.classList.contains("modal-overlay")) document.getElementById("histModal").innerHTML = "";
 }
 
 function renderDay() {
@@ -338,7 +316,7 @@ function renderDay() {
   const done = d.exercises.filter((_, i) => state.checked[`${day}-${i}`]).length;
   const pct = Math.round((done / total) * 100);
   const c = d.color, bg = d.bg;
-  const prevW = getPrevWeights(day);
+  const prev = getPrevSession(day);
   const dateVal = state.dates[day] || "";
 
   let html = `
@@ -348,10 +326,9 @@ function renderDay() {
     </div>
     <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${c}"></div></div>
     <div class="date-row">
-      <label for="dateInput">Session date</label>
-      <input type="date" id="dateInput" value="${dateVal}" onchange="setDate('${day}', this.value)">
-    </div>
-  `;
+      <label>Session date</label>
+      <input type="date" value="${dateVal}" onchange="setDate('${day}', this.value)">
+    </div>`;
 
   if (d.warmup) html += `<div class="info-bar">🔥 <strong>Warm-up:</strong> ${d.warmup}</div>`;
 
@@ -361,33 +338,39 @@ function renderDay() {
     const checked = !!state.checked[k];
     const hasWeight = ex.sets && ex.sets > 0;
     const wData = state.weights[k] || {};
+    const rData = state.reps[k] || {};
+    const prevW = prev ? (prev.weights[k] || {}) : {};
+    const prevR = prev ? ((prev.reps && prev.reps[k]) || {}) : {};
     const panelId = `panel-${day}-${i}`;
-    const borderColor = checked ? c : "var(--border)";
-    const cardBg = checked ? bg : "var(--bg)";
     const cbClass = `checkbox${checked ? " checked" : ""}`;
-    const cbBorder = checked ? c : "var(--border2)";
-    const cbBg = checked ? c : "transparent";
 
     let setRows = "";
     if (hasWeight) {
-      const prevK = prevW[k] || {};
       for (let si = 0; si < ex.sets; si++) {
-        const v = wData[si] !== undefined ? wData[si] : "";
-        const prev = prevK[si] || "";
-        const bColor = v ? c : "var(--border2)";
-        const prevLabel = prev ? `<span class="prev-weight">prev: ${prev}</span>` : `<span class="prev-weight"></span>`;
+        const wv = wData[si] !== undefined ? wData[si] : "";
+        const rv = rData[si] !== undefined ? rData[si] : "";
+        const pw = prevW[si] || "";
+        const pr = prevR[si] || "";
+        const prevLabel = pw ? `<span class="prev-info">${pw}${state.unit}${pr ? ` × ${pr}` : ""}</span>` : "";
         setRows += `<div class="set-row">
           <span class="set-label">Set ${si+1}</span>
-          <input id="w-${day}-${i}-${si}" class="set-input" type="number" placeholder="0" value="${v}" style="border-color:${bColor}" oninput="setWeight('${day}',${i},${si},this.value)">
+          <input id="w-${day}-${i}-${si}" class="set-input" type="number" placeholder="wt" value="${wv}"
+            style="border-color:${wv ? c : "var(--border2)"}"
+            oninput="setWeight('${day}',${i},${si},this.value)">
           <span class="set-unit">${state.unit}</span>
+          <span class="set-x">×</span>
+          <input id="r-${day}-${i}-${si}" class="set-input" type="number" placeholder="reps" value="${rv}"
+            style="border-color:${rv ? c : "var(--border2)"}"
+            oninput="setReps('${day}',${i},${si},this.value)">
           ${prevLabel}
         </div>`;
       }
     }
 
-    html += `<div style="border-radius:10px;border:0.5px solid ${borderColor};background:${cardBg};overflow:hidden">
+    html += `<div style="border-radius:10px;border:0.5px solid ${checked ? c : "var(--border)"};background:${checked ? bg : "var(--bg)"};overflow:hidden">
       <div class="ex-row" onclick="${hasWeight ? `togglePanel('${panelId}')` : `toggleCheck('${day}',${i})`}">
-        <div class="${cbClass}" style="border-color:${cbBorder};background:${cbBg}" onclick="event.stopPropagation();toggleCheck('${day}',${i})">
+        <div class="${cbClass}" style="border-color:${checked ? c : "var(--border2)"};background:${checked ? c : "transparent"}"
+          onclick="event.stopPropagation();toggleCheck('${day}',${i})">
           <svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4.5L4 7.5L10 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
         <div class="ex-info">
@@ -396,21 +379,21 @@ function renderDay() {
         </div>
         ${hasWeight ? `<span class="ex-arrow" id="arr-${panelId}">▼</span>` : ""}
       </div>
-      ${hasWeight ? `<div class="weight-panel" id="${panelId}" style="display:none"><div class="weight-label">Log weight · <span style="color:var(--text3)">prev = last session</span></div>${setRows}</div>` : ""}
+      ${hasWeight ? `<div class="weight-panel" id="${panelId}" style="display:none">
+        <div class="weight-label">Log weight & reps · <span style="color:var(--text3)">prev = last session</span></div>
+        ${setRows}
+      </div>` : ""}
     </div>`;
   });
 
   html += `</div>`;
   if (d.cooldown) html += `<div class="info-bar" style="margin-top:4px">🧊 <strong>Cool-down:</strong> ${d.cooldown}</div>`;
   html += `<div class="bottom-row"><button class="reset-btn" onclick="resetDay()">Save & reset ${day}</button></div>`;
-
   document.getElementById("dayView").innerHTML = html;
   document.getElementById("unitBtn").textContent = state.unit;
 }
 
-load();
-renderTabs();
-renderDay();
+load(); renderTabs(); renderDay();
 </script>
 </body>
 </html>
